@@ -1,15 +1,45 @@
+`include "axi4_lite_interface.vh"
+
 module LSU_SRAM (
     input clk,
     input rst,
     
-    // SRAM接口
+    // 原始接口（保持兼容）
     input req,              // 访存请求
     input wen,              // 写使能，1为写，0为读
     input [31:0] addr,      // 32位地址
     input [31:0] wdata,     // 写数据
     input [3:0] wmask,      // 字节写掩码
-    output reg rvalid,      // 读数据有效
-    output reg [31:0] rdata // 读数据
+    output reg rvalid_out,  // 读数据有效
+    output reg [31:0] rdata_out, // 读数据
+    
+    // AXI4-Lite Master接口
+    // Write Address Channel (AW)
+    output reg [31:0] awaddr,
+    output reg        awvalid,
+    input             awready,
+    
+    // Write Data Channel (W)
+    output reg [31:0] wdata_axi,
+    output reg [3:0]  wstrb,
+    output reg        wvalid,
+    input             wready,
+    
+    // Write Response Channel (B)
+    input [1:0]       bresp,
+    input             bvalid,
+    output reg        bready,
+    
+    // Read Address Channel (AR)
+    output reg [31:0] araddr,
+    output reg        arvalid,
+    input             arready,
+    
+    // Read Data Channel (R)
+    input [31:0]      rdata,
+    input [1:0]       rresp,
+    input             rvalid,
+    output reg        rready
 );
 
 // 通过 DPI-C 与 C++ 侧物理内存/设备交互（MMIO/外部内存）
@@ -68,11 +98,22 @@ always @(posedge clk or posedge rst) begin
     wen_stage1 <= 1'b0;
     in_dmem_stage1 <= 1'b0;
     dmem_idx_stage1 <= 8'h0;
-    rvalid <= 1'b0;
-    rdata <= 32'h0;
+    rvalid_out <= 1'b0;
+    rdata_out <= 32'h0;
     dmem_wen <= 1'b0;
     dmem_waddr <= 8'h00;
     dmem_wdata <= 32'h0;
+    
+    // AXI4-Lite信号初始化
+    awaddr <= 32'h0;
+    awvalid <= 1'b0;
+    wdata_axi <= 32'h0;
+    wstrb <= 4'h0;
+    wvalid <= 1'b0;
+    bready <= 1'b0;
+    araddr <= 32'h0;
+    arvalid <= 1'b0;
+    rready <= 1'b0;
   end else begin
     // 第一级流水线：保存请求信息
     addr_stage1 <= addr;
@@ -82,16 +123,16 @@ always @(posedge clk or posedge rst) begin
     dmem_idx_stage1 <= dmem_idx;
     
     // 第二级流水线：处理读操作，延迟1周期返回
-    rvalid <= req_stage1 && !wen_stage1; // 只有读请求才有效
+    rvalid_out <= req_stage1 && !wen_stage1; // 只有读请求才有效
     if (req_stage1 && !wen_stage1) begin
       // 读操作
       if (in_dmem_stage1) begin
-        rdata <= dmem_rdata2; // 使用第二个读端口读取延迟的地址
+        rdata_out <= dmem_rdata2; // 使用第二个读端口读取延迟的地址
       end else begin
-        rdata <= pmem_read(addr_stage1);
+        rdata_out <= pmem_read(addr_stage1);
       end
     end else begin
-      rdata <= 32'h0;
+      rdata_out <= 32'h0;
     end
     
     // 写操作：立即处理，不延迟
@@ -106,6 +147,38 @@ always @(posedge clk or posedge rst) begin
       end
     end else begin
       dmem_wen <= 1'b0;
+    end
+    
+    // AXI4-Lite握手信号（简化处理，立即响应）
+    // 写地址通道
+    if (req && wen && !in_dmem) begin
+      awaddr <= addr;
+      awvalid <= 1'b1;
+    end else if (awvalid && awready) begin
+      awvalid <= 1'b0;
+    end
+    
+    // 写数据通道
+    if (req && wen && !in_dmem) begin
+      wdata_axi <= wdata;
+      wstrb <= wmask;
+      wvalid <= 1'b1;
+      bready <= 1'b1;
+    end else if (wvalid && wready) begin
+      wvalid <= 1'b0;
+    end else if (bvalid && bready) begin
+      bready <= 1'b0;
+    end
+    
+    // 读地址通道
+    if (req && !wen && !in_dmem) begin
+      araddr <= addr;
+      arvalid <= 1'b1;
+      rready <= 1'b1;
+    end else if (arvalid && arready) begin
+      arvalid <= 1'b0;
+    end else if (rvalid && rready) begin
+      rready <= 1'b0;
     end
   end
 end

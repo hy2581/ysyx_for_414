@@ -90,19 +90,57 @@ EXU EXU (
     .regs        (exu_regs)
 );
 
-// LSU SRAM模块实例化
+// AXI4-Lite信号定义 - LSU
+wire [31:0] lsu_awaddr;
+wire        lsu_awvalid;
+wire        lsu_awready;
+wire [31:0] lsu_wdata_axi;
+wire [3:0]  lsu_wstrb;
+wire        lsu_wvalid;
+wire        lsu_wready;
+wire [1:0]  lsu_bresp;
+wire        lsu_bvalid;
+wire        lsu_bready;
+wire [31:0] lsu_araddr;
+wire        lsu_arvalid;
+wire        lsu_arready;
+wire [31:0] lsu_rdata_axi;
+wire [1:0]  lsu_rresp;
+wire        lsu_rvalid_axi;
+wire        lsu_rready;
+
+// LSU SRAM模块实例化：AXI4-Lite master接口
 LSU_SRAM LSU_SRAM (
     .clk         (clk),
     .rst         (rst),
     
-    // SRAM接口
+    // 原始接口
     .req         (lsu_req),
     .wen         (lsu_wen),
     .addr        (lsu_addr),
     .wdata       (lsu_wdata),
     .wmask       (lsu_wmask),
-    .rvalid      (lsu_rvalid),
-    .rdata       (lsu_rdata)
+    .rvalid_out  (lsu_rvalid),
+    .rdata_out   (lsu_rdata),
+    
+    // AXI4-Lite Master接口
+    .awaddr      (lsu_awaddr),
+    .awvalid     (lsu_awvalid),
+    .awready     (lsu_awready),
+    .wdata_axi   (lsu_wdata_axi),
+    .wstrb       (lsu_wstrb),
+    .wvalid      (lsu_wvalid),
+    .wready      (lsu_wready),
+    .bresp       (lsu_bresp),
+    .bvalid      (lsu_bvalid),
+    .bready      (lsu_bready),
+    .araddr      (lsu_araddr),
+    .arvalid     (lsu_arvalid),
+    .arready     (lsu_arready),
+    .rdata       (lsu_rdata_axi),
+    .rresp       (lsu_rresp),
+    .rvalid      (lsu_rvalid_axi),
+    .rready      (lsu_rready)
 );
 
 // 初始化与复位逻辑
@@ -226,14 +264,83 @@ reg  [31:0] op_ifu;
 wire [31:0] ifu_addr = (update_pc) ? next_pc : pc;
 
 // EXU 已在前文实例化并接入 IFU 的指令与握手，这里删除重复实例
-// IFU SRAM 实例化：通过 DPI-C 读物理内存，1周期延迟返回
+// AXI4-Lite信号定义 - IFU
+wire [31:0] ifu_awaddr;
+wire        ifu_awvalid;
+wire        ifu_awready;
+wire [31:0] ifu_wdata;
+wire [3:0]  ifu_wstrb;
+wire        ifu_wvalid;
+wire        ifu_wready;
+wire [1:0]  ifu_bresp;
+wire        ifu_bvalid;
+wire        ifu_bready;
+wire [31:0] ifu_araddr;
+wire        ifu_arvalid;
+wire        ifu_arready;
+wire [31:0] ifu_rdata_axi;
+wire [1:0]  ifu_rresp;
+wire        ifu_rvalid_axi;
+wire        ifu_rready;
+
+// IFU SRAM 实例化：AXI4-Lite master接口
 IFU_SRAM u_ifu (
-    .clk    (clk),
-    .rst    (rst),
-    .req    (ifu_req),
-    .addr   (ifu_addr),
-    .rvalid (ifu_rvalid),
-    .rdata  (ifu_rdata)
+    .clk         (clk),
+    .rst         (rst),
+    .req         (ifu_req),
+    .addr        (ifu_addr),
+    .rvalid_out  (ifu_rvalid),
+    .rdata_out   (ifu_rdata),
+    
+    // AXI4-Lite Master接口
+    .awaddr      (ifu_awaddr),
+    .awvalid     (ifu_awvalid),
+    .awready     (ifu_awready),
+    .wdata       (ifu_wdata),
+    .wstrb       (ifu_wstrb),
+    .wvalid      (ifu_wvalid),
+    .wready      (ifu_wready),
+    .bresp       (ifu_bresp),
+    .bvalid      (ifu_bvalid),
+    .bready      (ifu_bready),
+    .araddr      (ifu_araddr),
+    .arvalid     (ifu_arvalid),
+    .arready     (ifu_arready),
+    .rdata       (ifu_rdata_axi),
+    .rresp       (ifu_rresp),
+    .rvalid      (ifu_rvalid_axi),
+    .rready      (ifu_rready)
 );
+
+
+
+// AXI4-Lite接口连接 - 由于IFU和LSU内部直接使用DPI-C，
+// 我们只需要提供简单的握手响应来满足AXI4-Lite协议
+
+// IFU写通道响应（始终为0）
+assign ifu_awready = 1'b1; // 立即响应，但IFU不应该使用
+assign ifu_wready  = 1'b1; // 立即响应，但IFU不应该使用
+assign ifu_bresp   = 2'b00;
+assign ifu_bvalid  = 1'b0; // 永远不会有写响应
+
+// IFU读通道响应（1周期延迟）
+assign ifu_arready = 1'b1; // 立即接受地址
+assign ifu_rdata_axi = 32'h0; // 不使用，数据通过DPI-C获取
+assign ifu_rresp = 2'b00;
+assign ifu_rvalid_axi = 1'b1; // 立即响应，实际延迟在模块内部实现
+
+// LSU写通道响应（1周期延迟）
+assign lsu_awready = 1'b1; // 立即接受地址
+assign lsu_wready  = 1'b1; // 立即接受数据
+assign lsu_bresp   = 2'b00;
+assign lsu_bvalid  = 1'b1; // 立即响应
+
+// LSU读通道响应（1周期延迟）
+assign lsu_arready = 1'b1; // 立即接受地址
+assign lsu_rdata_axi = 32'h0; // 不使用，数据通过DPI-C获取
+assign lsu_rresp = 2'b00;
+assign lsu_rvalid_axi = 1'b1; // 立即响应，实际延迟在模块内部实现
+
+
 
 endmodule

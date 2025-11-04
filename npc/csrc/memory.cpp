@@ -33,10 +33,12 @@ extern "C" uint32_t pmem_read(uint32_t raddr) {
 }
 
 extern "C" void pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
-  // 设备写优先
+  // 设备写优先 - devices::write会处理所有设备地址
   devices::write(waddr, wdata, wmask);
-  if (waddr == SERIAL_PORT || waddr == SYNC_ADDR || (waddr >= FB_ADDR && waddr < FB_ADDR + (uint32_t)(4 * 4096 * 4096))) {
-    // 属于设备地址，设备模块已处理
+  
+  // 检查是否是设备地址范围（简化检查）
+  if (waddr >= 0xa0000000 && waddr < 0xa2000000) {
+    // 属于设备地址范围，设备模块已处理
     return;
   }
 

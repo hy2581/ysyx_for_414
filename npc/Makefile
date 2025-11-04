@@ -54,6 +54,7 @@ LDFLAGS += -ldl -lrt -lpthread $(SDL2_LDFLAGS)
 $(BIN): $(VSRCS) $(CSRCS) $(NVBOARD_ARCHIVE)
 	@rm -rf $(OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
+        -I$(abspath ./vsrc) \
         --top-module $(TOPNAME) $^ \
         $(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
         --Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))

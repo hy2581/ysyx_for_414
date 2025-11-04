@@ -16,6 +16,14 @@ typedef struct { void *start, *end; } Area;
 #include "amdev.h"
 #include "devices.h"
 
+// 设备地址定义
+#define SERIAL_PORT  0xa00003f8
+#define VGACTL_ADDR  0xa0000100
+#define KBD_ADDR     0xa0000060
+#define RTC_ADDR     0xa0000048
+#define SYNC_ADDR    0xa0000104
+#define FB_ADDR      0xa1000000
+
 // SDL Scancode → AM 键码映射表，按 AM_KEYS 与 SDL_SCANCODE 同名键对齐
 static uint32_t scancode_map[256] = {};
 static inline void init_scancode_map() {
@@ -152,6 +160,10 @@ static void vga_sync_dump() {
 }
 
 void init() {
+  static bool initialized = false;
+  if (initialized) return;
+  initialized = true;
+  
   const char* env_w = getenv("NPC_SCREEN_W");
   const char* env_h = getenv("NPC_SCREEN_H");
   if (env_w) { int w = atoi(env_w); if (w > 0) screen_w = w; }
@@ -197,12 +209,16 @@ void init() {
   }
 
   kbd_running.store(true);
-  if (use_sdl) {
-    static std::thread th(sdl_event_thread_func);
-    th.detach();
-  } else {
-    static std::thread th(keyboard_thread_func);
-    th.detach();
+  static bool thread_started = false;
+  if (!thread_started) {
+    thread_started = true;
+    if (use_sdl) {
+      std::thread th(sdl_event_thread_func);
+      th.detach();
+    } else {
+      std::thread th(keyboard_thread_func);
+      th.detach();
+    }
   }
 }
 
