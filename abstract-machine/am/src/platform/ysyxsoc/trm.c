@@ -17,14 +17,17 @@ Area heap = RANGE(&_heap_start, (char *)&_stack_pointer - STACK_SIZE);
 
 void uart_init() {
   *(volatile uint8_t *)(UART_BASE + UART_LCR) = 0x80; 
-  *(volatile uint8_t *)(UART_BASE + UART_DLL) = 0x1;
-  *(volatile uint8_t *)(UART_BASE + UART_DLM) = 0x0;
+  for (volatile int i = 0; i < 1000; i++);
+  *(volatile uint8_t *)(UART_BASE + UART_DLL) = 0x01;
+  for (volatile int i = 0; i < 1000; i++);
+  *(volatile uint8_t *)(UART_BASE + UART_DLM) = 0x00;
+  for (volatile int i = 0; i < 1000; i++);
   *(volatile uint8_t *)(UART_BASE + UART_LCR) = 0x03;
+  for (volatile int i = 0; i < 1000; i++);
 }
 
 void putch(char ch) {
-  // Rely on LSU handshake and UART FIFO.
-  // Polling LSR is bypassed to eliminate simulation delays.
+  while ((*(volatile uint8_t *)(UART_BASE + UART_LSR) & 0x20) == 0);
   *(volatile char *)(UART_BASE + UART_TX) = ch;
 }
 
