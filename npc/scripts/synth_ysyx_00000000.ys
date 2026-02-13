@@ -1,0 +1,23 @@
+# ysyx_00000000 (npc CPU) 综合脚本
+# 用法: yosys -s npc/scripts/synth_ysyx_00000000.ys
+# 从 workspace 根目录运行
+
+# 读入 npc CPU 及子模块
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/EXU.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/RegisterFile.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/ICache.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/IFU_AXI.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/LSU_AXI.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/AXI4_Lite_Arbiter.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/AXI4_Lite_to_AXI4_Bridge.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/ysyx_00000000.v
+
+hierarchy -check -top ysyx_00000000
+proc
+flatten
+opt
+techmap
+opt
+stat
+write_verilog -noattr npc/scripts/synth_output/ysyx_00000000_synth.v
+write_verilog -noattr -noexpr npc/scripts/synth_output/ysyx_00000000_structural.v

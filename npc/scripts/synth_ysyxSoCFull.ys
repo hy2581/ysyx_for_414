@@ -2,9 +2,8 @@
 # 用法: ./run_synth_ysyxSoCFull.sh 或 yosys -s npc/scripts/synth_ysyxSoCFull.ys
 # 从 workspace 根目录运行
 
-# 读入 ysyxSoCFull 顶层
-# 使用预处理版本 (automatic logic -> logic)，需 Yosys 0.36+ 以支持 logic [n][m] 等 SV 语法
-read_verilog -sv npc/vsrc/ysyxSoCFull_synth_input.v
+# 读入 ysyxSoCFull 顶层 (预处理版本: automatic logic -> logic)
+read_verilog -sv -D SYNTHESIS npc/vsrc/ysyxSoCFull_synth_input.v
 
 # 读入 ysyxSoC 外设 IP
 read_verilog -sv ysyxSoC/perip/flash/flash.v

@@ -13,21 +13,26 @@ if [ ! -f "ysyxSoC/build/ysyxSoCFull.v" ]; then
     exit 1
 fi
 
-# 检查 yosys 是否可用
-if ! command -v yosys &> /dev/null; then
-    echo "错误: 未找到 yosys。请安装: sudo apt install yosys"
+# 优先使用最新版 Yosys（若已编译）
+if [ -f "$WORKSPACE_ROOT/yosys-latest/yosys" ]; then
+    YOSYS="$WORKSPACE_ROOT/yosys-latest/yosys"
+    echo "使用最新版 Yosys: $($YOSYS --version 2>/dev/null | head -1)"
+elif command -v yosys &> /dev/null; then
+    YOSYS="yosys"
+else
+    echo "错误: 未找到 yosys。请安装: sudo apt install yosys 或编译 yosys-latest"
     exit 1
 fi
 
-# 预处理：Yosys 0.33 不支持 "automatic logic"，替换为 "logic"
+# 预处理 RTL 以支持综合
 SYNTH_V="npc/vsrc/ysyxSoCFull_synth_input.v"
 sed 's/automatic logic/logic/g' ysyxSoC/build/ysyxSoCFull.v > "$SYNTH_V"
+# 替换 DPI-C（仅仿真用）为综合兼容的 MROMHelper 实现
+sed -i 's/import "DPI-C" function void mrom_read(input int raddr, output int rdata);/\/\/ DPI removed for synthesis/' "$SYNTH_V"
+sed -i 's/if (ren) mrom_read(raddr, rdata);/if (ren) rdata = 32'"'"'h0; \/\/ DPI stub/' "$SYNTH_V"
 
 echo "开始综合 ysyxSoCFull..."
-echo "注意: ysyxSoCFull 由 Chisel/Firtool 生成，包含 SystemVerilog 2012 语法。"
-echo "      Yosys 0.33 可能无法完全解析，建议使用 Yosys 0.36+ 或 run-sta.sh 中的 yosys-sta。"
-# 使用预处理后的文件进行综合
-yosys -s npc/scripts/synth_ysyxSoCFull.ys
+$YOSYS -s npc/scripts/synth_ysyxSoCFull.ys
 
 echo ""
 echo "综合完成！输出文件："

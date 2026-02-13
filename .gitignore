@@ -44,3 +44,6 @@ npc_backup_*/
 # Specific generated files
 tags
 cscope.out
+
+# Yosys build (use prebuilt or system yosys)
+yosys-latest/

@@ -35,8 +35,12 @@ git-status:
 synth-ysyxSoCFull:
 	@./run_synth_ysyxSoCFull.sh
 
+# 综合与 PPA 评估（使用最新 Yosys，生成报告）
+synth-ppa:
+	@./scripts/run_synth_and_ppa.sh
+
 # 生成 ysyxSoCFull Verilog（需 mill）
 verilog-ysyxSoCFull:
 	@cd ysyxSoC && PATH="$(shell pwd):$$PATH" make verilog
 
-.PHONY: default $(SUBPROJECTS) git-commit git-status synth-ysyxSoCFull verilog-ysyxSoCFull
+.PHONY: default $(SUBPROJECTS) git-commit git-status synth-ysyxSoCFull synth-ppa verilog-ysyxSoCFull
