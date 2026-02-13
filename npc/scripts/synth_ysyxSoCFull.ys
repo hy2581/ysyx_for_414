@@ -1,0 +1,34 @@
+# Yosys 综合脚本 - ysyxSoCFull
+# 用法: 在 npc 目录下运行: make synth-ysyxSoCFull
+# 或: cd npc && yosys -s scripts/synth_ysyxSoCFull.ys
+#
+# 源文件: vsrc/ysyxsoc+ysyxSoC/build/ysyxSoCFull.v
+# 若不存在，可从 ysyxSoC/ready-to-run/D-stage/ysyxSoCFull.v 复制
+
+# 定义 SYNTHESIS 宏，使 initial 块在综合时被排除
+read_verilog -sv -DSYNTHESIS vsrc/ysyxsoc+ysyxSoC/build/ysyxSoCFull.v
+
+# 指定顶层模块并检查层次
+hierarchy -check -top ysyxSoCFull
+
+# 过程块转电路（always、if/case 等 -> MUX、寄存器）
+proc
+
+# 展平层次，便于优化
+flatten
+
+# 逻辑优化
+opt
+
+# 技术映射：映射到 Yosys 通用门（$_AND_、$_OR_、$_DFF_P_ 等）
+techmap
+opt
+
+# 打印单元统计
+stat
+
+# 写出行为/表达式网表（适合仿真、查看逻辑）
+write_verilog -noattr -noassert scripts/synth_output/ysyxSoCFull_synth.v
+
+# 写出结构网表（保留单元实例，供 STA 使用）
+write_verilog -noattr -noexpr -noassert scripts/synth_output/ysyxSoCFull_structural.v

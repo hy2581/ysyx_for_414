@@ -124,8 +124,9 @@ help:
 	@echo "  run            : 运行仿真（默认不生成波形）"
 	@echo "  run-notrace    : 运行仿真（不生成VCD，节省磁盘空间）"
 	@echo "  wave           : 启用波形跟踪运行仿真并打开 GTKWave"
-	@echo "  synth-ysyx     : Yosys 综合 ysyx_00000000（输出 scripts/synth_output）"
-	@echo "  sta            : 时序分析（OpenSTA 或估算），需先 make synth-ysyx"
+	@echo "  synth-ysyx        : Yosys 综合 ysyx_00000000（输出 scripts/synth_output）"
+	@echo "  synth-ysyxSoCFull : Yosys 综合 ysyxSoCFull.v（输出 scripts/synth_output）"
+	@echo "  sta               : 时序分析（OpenSTA 或估算），需先 make synth-ysyx"
 	@echo "  clean          : 清除所有构建产物"
 	@echo "  help           : 显示此帮助信息"
 
@@ -136,8 +137,17 @@ clean:
 synth-ysyx:
 	cd scripts && yosys -s synth.ys
 
+# Yosys 综合 ysyxSoCFull（需先确保 vsrc/ysyxsoc+ysyxSoC/build/ysyxSoCFull.v 存在）
+synth-ysyxSoCFull:
+	@mkdir -p vsrc/ysyxsoc+ysyxSoC/build scripts/synth_output
+	@if [ ! -f vsrc/ysyxsoc+ysyxSoC/build/ysyxSoCFull.v ]; then \
+		echo "复制 ysyxSoCFull.v 到 build 目录..."; \
+		cp ../ysyxSoC/ready-to-run/D-stage/ysyxSoCFull.v vsrc/ysyxsoc+ysyxSoC/build/; \
+	fi
+	yosys -s scripts/synth_ysyxSoCFull.ys
+
 # 时序分析：有 OpenSTA 则跑 STA，否则跑时序估算（需先 make synth-ysyx）
 sta:
 	@./scripts/sta/run_sta.sh
 
-.PHONY: default all clean run wave help iverilog synth-ysyx sta
+.PHONY: default all clean run wave help iverilog synth-ysyx synth-ysyxSoCFull sta
