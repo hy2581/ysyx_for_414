@@ -1,0 +1,77 @@
+# ysyxSoCFull 综合脚本 (Yosys)
+# 用法: ./run_synth_ysyxSoCFull.sh 或 yosys -s npc/scripts/synth_ysyxSoCFull.ys
+# 从 workspace 根目录运行
+
+# 读入 ysyxSoCFull 顶层
+# 使用预处理版本 (automatic logic -> logic)，需 Yosys 0.36+ 以支持 logic [n][m] 等 SV 语法
+read_verilog -sv npc/vsrc/ysyxSoCFull_synth_input.v
+
+# 读入 ysyxSoC 外设 IP
+read_verilog -sv ysyxSoC/perip/flash/flash.v
+read_verilog -sv ysyxSoC/perip/bitrev/bitrev.v
+read_verilog -sv ysyxSoC/perip/amba/apb_delayer.v
+read_verilog -sv ysyxSoC/perip/amba/axi4_delayer.v
+read_verilog -sv ysyxSoC/perip/gpio/gpio_top_apb.v
+read_verilog -sv ysyxSoC/perip/ps2/ps2_top_apb.v
+read_verilog -sv ysyxSoC/perip/vga/vga_top_apb.v
+read_verilog -sv ysyxSoC/perip/psram/psram.v
+read_verilog -sv ysyxSoC/perip/psram/psram_top_apb.v
+read_verilog -sv ysyxSoC/perip/psram/efabless/EF_PSRAM_CTRL.v
+read_verilog -sv ysyxSoC/perip/psram/efabless/EF_PSRAM_CTRL_wb.v
+read_verilog -sv ysyxSoC/perip/sdram/sdram.v
+read_verilog -sv ysyxSoC/perip/sdram/sdram_top_apb.v
+read_verilog -sv ysyxSoC/perip/sdram/sdram_top_axi.v
+read_verilog -sv ysyxSoC/perip/sdram/core_sdram_axi4/sdram_axi.v
+read_verilog -sv ysyxSoC/perip/sdram/core_sdram_axi4/sdram_axi_pmem.v
+read_verilog -sv ysyxSoC/perip/sdram/core_sdram_axi4/sdram_axi_core.v
+read_verilog -sv ysyxSoC/perip/spi/rtl/spi_defines.v
+read_verilog -sv ysyxSoC/perip/spi/rtl/spi_clgen.v
+read_verilog -sv ysyxSoC/perip/spi/rtl/spi_shift.v
+read_verilog -sv ysyxSoC/perip/spi/rtl/spi_top.v
+read_verilog -sv ysyxSoC/perip/spi/rtl/spi_top_apb.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_defines.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_sync_flops.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/raminfr.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_receiver.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_transmitter.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_rfifo.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_tfifo.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_regs.v
+read_verilog -sv ysyxSoC/perip/uart16550/rtl/uart_top_apb.v
+
+# 读入 npc CPU 及子模块 (需 -I 指定 include 路径)
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/EXU.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/RegisterFile.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/ICache.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/IFU_AXI.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/LSU_AXI.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/AXI4_Lite_Arbiter.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/core/AXI4_Lite_to_AXI4_Bridge.v
+read_verilog -sv -Inpc/vsrc/core -Inpc/vsrc/perip npc/vsrc/ysyx_00000000.v
+
+# 指定顶层并检查层次
+hierarchy -check -top ysyxSoCFull
+
+# 过程块转电路
+proc
+
+# 展平
+flatten
+
+# 逻辑优化
+opt
+
+# 技术映射
+techmap
+
+# 再优化
+opt
+
+# 统计
+stat
+
+# 写出综合网表 (行为/表达式，可仿真)
+write_verilog -noattr npc/scripts/synth_output/ysyxSoCFull_synth.v
+
+# 写出结构网表 (给 STA 用)
+write_verilog -noattr -noexpr npc/scripts/synth_output/ysyxSoCFull_structural.v

@@ -31,4 +31,12 @@ git-commit:
 git-status:
 	@git status
 
-.PHONY: default   $(SUBPROJECTS) git-commit git-status
+# ysyxSoCFull 综合（需先 cd ysyxSoC && make verilog 生成 RTL）
+synth-ysyxSoCFull:
+	@./run_synth_ysyxSoCFull.sh
+
+# 生成 ysyxSoCFull Verilog（需 mill）
+verilog-ysyxSoCFull:
+	@cd ysyxSoC && PATH="$(shell pwd):$$PATH" make verilog
+
+.PHONY: default $(SUBPROJECTS) git-commit git-status synth-ysyxSoCFull verilog-ysyxSoCFull
